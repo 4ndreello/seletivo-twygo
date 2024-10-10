@@ -1,6 +1,7 @@
 "use client";
 
 import imagePlaceholder from "@app/images/image.png";
+import { useRouter } from "next/navigation";
 import { AddIcon } from "@chakra-ui/icons";
 import {
   Box,
@@ -19,14 +20,33 @@ import {
 } from "@chakra-ui/react";
 import { bigText } from "@styles";
 import Image from "next/image";
+import { useState } from "react";
 
-const data = [
-  { title: "Course 1", description: "Description 1" },
-  { title: "Course 2", description: "Description 2" },
-  { title: "Course 3", description: "Description 3" },
+const MAX_TEXT_DESCRIPTION = 120;
+
+const data: TCourse[] = [
+  {
+    title: "Course 1",
+    description:
+      "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+  },
 ];
 
+type TCourse = {
+  title: string;
+  description: string;
+};
+
 export default function Page() {
+  const router = useRouter();
+
+  const [current, setCurrent] = useState<TCourse>({
+    title: "Empty",
+    description: "Empty",
+  });
+
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
   return (
     <>
       <Box>
@@ -47,12 +67,21 @@ export default function Page() {
                   }
                 `}
                 key={index}
+                onClick={() => {
+                  setCurrent(course);
+                  onOpen();
+                }}
               >
+                <Box>
+                  <Text
+                    textAlign="center"
+                    fontSize={{ base: "15px", md: "20px", lg: "26px" }}
+                  >
+                    {course.title}
+                  </Text>
+                </Box>
                 <Box
                   style={{
-                    alignContent: "center",
-                    justifyContent: "center",
-                    alignItems: "center",
                     display: "flex",
                   }}
                 >
@@ -62,14 +91,13 @@ export default function Page() {
                     height={300}
                     alt="Picture of course.title"
                   />
-                </Box>
-
-                <Box>
-                  <Text
-                    textAlign="center"
-                    fontSize={{ base: "15px", md: "20px", lg: "26px" }}
-                  >
-                    {course.title}
+                  <Text p="2">
+                    {course.description.length > MAX_TEXT_DESCRIPTION
+                      ? `${course.description.substring(
+                          0,
+                          MAX_TEXT_DESCRIPTION
+                        )}...`
+                      : course.description}
                   </Text>
                 </Box>
               </GridItem>
@@ -77,6 +105,24 @@ export default function Page() {
           </Grid>
         </Box>
       </Box>
+
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>{current.title}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <p>{current?.description}</p>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={onClose}>
+              Close
+            </Button>
+            <Button variant="ghost">Change</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Box
         position="fixed"
@@ -87,6 +133,9 @@ export default function Page() {
         bg="blue.500"
         color="white"
         borderRadius="5px"
+        onClick={() => {
+          router.push("/course/insert");
+        }}
         css={`
           &:hover {
             background-color: red;
@@ -94,7 +143,7 @@ export default function Page() {
           }
         `}
       >
-        <AddIcon boxSize={4} />
+        <AddIcon boxSize={4} w={5} h={5} />
       </Box>
     </>
   );
