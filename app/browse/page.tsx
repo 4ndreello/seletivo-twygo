@@ -8,20 +8,24 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import "@app/global.css";
+import { useEffect, useState } from "react";
+import { isMobileDevice } from "@/utils/isMobile";
 
 const MAX_TEXT_DESCRIPTION = 120;
 
-const courses: TCourse[] = [
-  {
-    id: "4bec0d9e-abca-499e-b096-46fd440702bb",
-    title: "Course 1",
-    description:
-      "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-  },
-];
-
 export default function Page() {
   const router = useRouter();
+  const [courses, setCourses] = useState<TCourse[]>([]);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  useEffect(() => {
+    fetch(`/api/course`)
+      .then((res) => res.json())
+      .then(async (data) => {
+        setIsMobile(await isMobileDevice());
+        setCourses(data.courses);
+      });
+  }, []);
 
   return (
     <>
@@ -55,11 +59,8 @@ export default function Page() {
                     {course.title}
                   </Text>
                 </Box>
-                <Box
-                  style={{
-                    display: "flex",
-                  }}
-                >
+
+                <Box {...(!isMobile ? { display: "flex" } : {})}>
                   <Image
                     src={imagePlaceholder}
                     width={300}
@@ -91,7 +92,7 @@ export default function Page() {
         color="white"
         borderRadius="5px"
         onClick={() => {
-          router.push("/course/insert");
+          router.push("/course/new");
         }}
         css={`
           &:hover {

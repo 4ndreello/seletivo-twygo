@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Video {
+  id        String @id @default(uuid())
+  title     String
+  youtubeId String
+  course    Course @relation(fields: [courseId], references: [id])
+  courseId  String
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  image       String?
+  dueDate     DateTime
+
+  Video Video[]
+}
