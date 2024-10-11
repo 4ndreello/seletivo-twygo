@@ -1,26 +1,14 @@
 "use client";
 
 import imagePlaceholder from "@app/images/image.png";
-import { useRouter } from "next/navigation";
 import { AddIcon } from "@chakra-ui/icons";
-import {
-  Box,
-  Button,
-  Grid,
-  GridItem,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Text,
-  useDisclosure,
-} from "@chakra-ui/react";
+import { Box, Grid, GridItem, Text } from "@chakra-ui/react";
 import { bigText } from "@styles";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+import "@app/global.css";
 
 const MAX_TEXT_DESCRIPTION = 120;
 
@@ -45,8 +33,6 @@ export default function Page() {
     description: "Empty",
   });
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
-
   return (
     <>
       <Box>
@@ -69,7 +55,6 @@ export default function Page() {
                 key={index}
                 onClick={() => {
                   setCurrent(course);
-                  onOpen();
                 }}
               >
                 <Box>
@@ -105,24 +90,6 @@ export default function Page() {
           </Grid>
         </Box>
       </Box>
-
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>{current.title}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <p>{current?.description}</p>
-          </ModalBody>
-
-          <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={onClose}>
-              Close
-            </Button>
-            <Button variant="ghost">Change</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
 
       <Box
         position="fixed"
