@@ -279,24 +279,27 @@ export default function Page() {
             h={16}
           />
         </Box>
-        <Box>
-          <DeleteIcon
-            borderRadius={6}
-            p={2}
-            bg="red"
-            color="white"
-            onClick={() => {
-              fetch(`/api/course/${courseId}`, {
-                method: "DELETE",
-              }).then(() => {
-                router.back();
-              });
-            }}
-            boxSize={4}
-            w={16}
-            h={16}
-          />
-        </Box>
+
+        {courseId !== "new" && (
+          <Box>
+            <DeleteIcon
+              borderRadius={6}
+              p={2}
+              bg="red"
+              color="white"
+              onClick={() => {
+                fetch(`/api/course/${courseId}`, {
+                  method: "DELETE",
+                }).then(() => {
+                  router.back();
+                });
+              }}
+              boxSize={4}
+              w={16}
+              h={16}
+            />
+          </Box>
+        )}
 
         <Box>
           <CheckIcon
@@ -314,8 +317,6 @@ export default function Page() {
                 alert("Please, select a due date");
                 return;
               }
-
-              console.log("course", course);
 
               fetch("/api/course", {
                 method: courseId !== "new" ? "PATCH" : "POST",
