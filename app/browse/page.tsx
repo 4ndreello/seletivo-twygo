@@ -6,32 +6,22 @@ import { Box, Grid, GridItem, Text } from "@chakra-ui/react";
 import { bigText } from "@styles";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
 import "@app/global.css";
 
 const MAX_TEXT_DESCRIPTION = 120;
 
-const data: TCourse[] = [
+const courses: TCourse[] = [
   {
+    id: "4bec0d9e-abca-499e-b096-46fd440702bb",
     title: "Course 1",
     description:
       "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
   },
 ];
 
-type TCourse = {
-  title: string;
-  description: string;
-};
-
 export default function Page() {
   const router = useRouter();
-
-  const [current, setCurrent] = useState<TCourse>({
-    title: "Empty",
-    description: "Empty",
-  });
 
   return (
     <>
@@ -42,7 +32,7 @@ export default function Page() {
 
         <Box p="5">
           <Grid templateColumns="repeat(3, 1fr)" gap={6}>
-            {data.map((course, index) => (
+            {courses.map((course, index) => (
               <GridItem
                 bg="blue.500"
                 p="5"
@@ -54,7 +44,7 @@ export default function Page() {
                 `}
                 key={index}
                 onClick={() => {
-                  setCurrent(course);
+                  router.push(`/browse/${course.id}`);
                 }}
               >
                 <Box>
@@ -114,4 +104,10 @@ export default function Page() {
       </Box>
     </>
   );
+}
+
+interface TCourse {
+  title: string;
+  description: string;
+  id: string;
 }
