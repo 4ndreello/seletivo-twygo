@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Providers } from "@app/providers";
 
 export const metadata: Metadata = {
-  title: "Twygo",
+  title: "Threewygo",
   description: "Simple SPA implementation for a course plataform",
 };
 

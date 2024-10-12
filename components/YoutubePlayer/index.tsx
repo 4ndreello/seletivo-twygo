@@ -10,6 +10,7 @@ interface YoutubePlayerProps {
 }
 
 export default function YoutubePlayer(Props: YoutubePlayerProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const videoReady = (event: any) => {
     if (event.target) {
       event.target.pauseVideo();
@@ -38,10 +39,11 @@ export default function YoutubePlayer(Props: YoutubePlayerProps) {
             opts={{
               width: "100%",
               borderRadius: "2rem",
-              playerVars: { autoplay: 1, mute: Props.mute, controls: 0 },
+              playerVars: { autoplay: 1, mute: Props.mute ? 1 : 0 },
             }}
             onReady={videoReady}
             {...(Props.onStateChange && {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onStateChange: (event: any) => {
                 if (Props.onStateChange) {
                   Props.onStateChange(event.target as YoutubeResponseTarget);

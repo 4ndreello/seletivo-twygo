@@ -31,10 +31,9 @@ import {
 } from "@chakra-ui/react";
 import callServer from "@utils/callServer";
 import extractYoutubeId from "@utils/extractYoutubeId";
-import useOnceCall from "@utils/useOnceCall";
 import validateYouTubeUrl from "@utils/validateYoutubeUrl";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Page() {
   const router = useRouter();
@@ -44,6 +43,7 @@ export default function Page() {
     description: "",
     dueDate: "",
     videos: [],
+    totalDuration: 0,
   });
   const query = useParams<{ id?: string }>();
   const courseId = query?.id ?? "";
@@ -54,8 +54,6 @@ export default function Page() {
   } | null>(null);
   const [loadingLastVideo, setLoadingLastVideo] = useState(false);
 
-  if (!courseId) return null;
-
   const [video, setVideo] = useState<Video>({
     title: "",
     youtubeId: "",
@@ -63,7 +61,7 @@ export default function Page() {
   });
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  useOnceCall(() => {
+  useEffect(() => {
     if (courseId === "new") {
       setIsLoading(false);
       return;
@@ -78,7 +76,7 @@ export default function Page() {
       setCourse(data);
       setIsLoading(false);
     });
-  });
+  }, [courseId, router]);
 
   const changeVideoTime = (videoId: string, durationToSet: number) => {
     setCourse((prev) => ({
@@ -121,6 +119,8 @@ export default function Page() {
 
     return response;
   };
+
+  const [youtubeLink, setYoutubeLink] = useState("");
 
   const handleSaveVideo = () => {
     if (!video.title || !video.youtubeId) {
@@ -170,8 +170,6 @@ export default function Page() {
     setVideo({ title: "", youtubeId: "", duration: 0 });
     onClose();
   };
-
-  const [youtubeLink, setYoutubeLink] = useState("");
 
   const handleRemoveVideo = (indexToRemove: number) => {
     const updatedVideos = course?.videos?.filter?.(

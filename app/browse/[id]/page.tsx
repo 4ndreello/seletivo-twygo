@@ -14,16 +14,14 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import callServer from "@utils/callServer";
-import useOnceCall from "@utils/useOnceCall";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const DESCRIPTION_CUT_SIZE = 250;
 
 export default function Page() {
   const router = useRouter();
   const query = useParams<{ id: string }>();
-  if (!query?.id) return null;
 
   const [course, setCourse] = useState<TCourse>({
     id: "",
@@ -32,22 +30,25 @@ export default function Page() {
     image: "",
     videos: [],
   });
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useOnceCall(() => {
-    callServer(`/api/course/${query?.id}`).then((data) => {
-      if (!data) {
-        router.back();
-        return;
-      }
-      if (!data.message) {
-        setCourse(data);
-        setIsLoading(false);
-      }
-    });
-  });
+  useEffect(() => {
+    if (query?.id) {
+      callServer(`/api/course/${query.id}`).then((data) => {
+        if (!data) {
+          router.back();
+          return;
+        }
+        if (!data.message) {
+          setCourse(data);
+          setIsLoading(false);
+        }
+      });
+    }
+  }, [query?.id, router]);
 
   if (isLoading) {
     return (
@@ -211,7 +212,7 @@ export default function Page() {
             size={"lg"}
             colorScheme="blue"
             borderRadius="full"
-            onClick={() => router.push(`/course/${query.id}`)}
+            onClick={() => router.push(`/course/${query?.id ?? ""}`)}
           />
         </HStack>
       </Flex>

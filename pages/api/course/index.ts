@@ -1,6 +1,5 @@
-import { Course, Video } from "@/types";
+import { Course } from "@/types";
 import { PrismaClient } from "@prisma/client";
-import extractYoutubeId from "@utils/extractYoutubeId";
 import insertVideosGetTotalDuration from "@utils/insertVideos";
 import requiredParams from "@utils/requiredParams";
 import type { NextApiRequest, NextApiResponse } from "next";
@@ -64,19 +63,22 @@ export default async function handler(
   res: NextApiResponse
 ) {
   try {
-    if (req.method === "GET") {
-      await handleGet(req, res);
-    } else if (req.method === "POST") {
-      await handlePost(req, res);
-    } else {
-      res.setHeader("Allow", ["GET", "PATCH", "POST"]);
-      res.status(405).end(`Method ${req.method} Not Allowed`);
+    switch (req.method) {
+      case "GET":
+        await handleGet(req, res);
+        break;
+      case "POST":
+        await handlePost(req, res);
+        break;
+      default:
+        res.setHeader("Allow", ["GET", "POST"]);
+        return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
-  } catch (error: any) {
-    console.log(error);
-    res.status(400).json({ success: false, message: error.message });
+  } catch (error) {
+    const message =
+      (error as { message?: string }).message || "Internal Server Error";
+    res.status(400).json({ success: false, message });
   } finally {
     await prisma.$disconnect();
   }
-  insertVideosGetTotalDuration;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Course } from "@/types";
+import "@app/global.css";
 import { AddIcon, TimeIcon, WarningTwoIcon } from "@chakra-ui/icons";
 import {
   Box,
@@ -13,12 +15,9 @@ import {
   Skeleton,
   Text,
 } from "@chakra-ui/react";
-import { useRouter } from "next/navigation";
-import { isMobileDevice } from "@/utils/isMobile";
-import "@app/global.css";
 import callServer from "@utils/callServer";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Course } from "@/types";
 
 interface TCourse extends Course {
   id: string;
@@ -27,13 +26,11 @@ interface TCourse extends Course {
 export default function Page() {
   const router = useRouter();
   const [courses, setCourses] = useState<TCourse[]>([]);
-  const [isMobile, setIsMobile] = useState<boolean>(false);
   const [filterExpired, setFilterExpired] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const getMaxTextDescription = () => {
-    return isMobile ? 50 : 150;
-  };
+  const MAX_DESCRIPTION_SIZE = 150;
+  const MAX_TITLE_SIZE = 30;
 
   const formatDuration = (totalDuration: number) => {
     const hours = Math.floor(totalDuration / 3600);
@@ -55,7 +52,6 @@ export default function Page() {
         return;
       }
 
-      setIsMobile(await isMobileDevice());
       setCourses(data.courses);
       setLoading(false);
     });
@@ -66,11 +62,12 @@ export default function Page() {
       <Box bgGradient="linear(to-b, white, gray.100)" minH="100vh" p={5}>
         <Text
           fontSize={{ base: "2xl", md: "4xl" }}
+          fontWeight={"bold"}
           textAlign="center"
           mb={5}
           color="gray.800"
         >
-          Browse between your courses
+          Browse through your courses
         </Text>
 
         <Box textAlign="center" mb={5}>
@@ -108,6 +105,9 @@ export default function Page() {
                     }}
                     key={index}
                     onClick={() => router.push(`/browse/${course.id}`)}
+                    minW="250px"
+                    h="300px"
+                    overflow="hidden"
                   >
                     <Box>
                       <Text
@@ -116,22 +116,22 @@ export default function Page() {
                         fontSize={{ base: "18px", md: "22px", lg: "28px" }}
                         mb={3}
                       >
-                        {course.title}
+                        {course.title.length > MAX_TITLE_SIZE
+                          ? `${course.title.substring(0, MAX_TITLE_SIZE)}...`
+                          : course.title}
                       </Text>
                     </Box>
 
-                    {!isMobile ? (
-                      <Box mt={3}>
-                        <Text>
-                          {course.description.length > getMaxTextDescription()
-                            ? `${course.description.substring(
-                                0,
-                                getMaxTextDescription()
-                              )}...`
-                            : course.description}
-                        </Text>
-                      </Box>
-                    ) : null}
+                    <Box mt={3}>
+                      <Text>
+                        {course.description.length > MAX_DESCRIPTION_SIZE
+                          ? `${course.description.substring(
+                              0,
+                              MAX_DESCRIPTION_SIZE
+                            )}...`
+                          : course.description}
+                      </Text>
+                    </Box>
 
                     <HStack justifyContent="center" mt={4}>
                       <Icon as={TimeIcon} boxSize={5} />

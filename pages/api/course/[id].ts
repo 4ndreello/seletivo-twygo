@@ -95,18 +95,24 @@ export default async function handler(
   res: NextApiResponse
 ) {
   try {
-    if (req.method === "GET") {
-      await handleGet(req, res);
-    } else if (req.method === "PATCH") {
-      await handlePatch(req, res);
-    } else if (req.method === "DELETE") {
-      await handleDelete(req, res);
-    } else {
-      res.setHeader("Allow", ["GET", "DELETE"]);
-      res.status(405).end(`Method ${req.method} Not Allowed`);
+    switch (req.method) {
+      case "GET":
+        await handleGet(req, res);
+        break;
+      case "PATCH":
+        await handlePatch(req, res);
+        break;
+      case "DELETE":
+        await handleDelete(req, res);
+        break;
+      default:
+        res.setHeader("Allow", ["GET", "PATCH", "DELETE"]);
+        return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
   } catch (error) {
-    res.status(500).json({ error, success: false });
+    const errorMessage =
+      error instanceof Error ? error.message : "Internal Server Error";
+    res.status(500).json({ error: errorMessage, success: false });
   } finally {
     await prisma.$disconnect();
   }
