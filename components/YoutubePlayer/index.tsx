@@ -1,13 +1,23 @@
+import { YoutubeResponseTarget } from "@/types";
 import React from "react";
 import YouTube from "react-youtube";
 
 interface YoutubePlayerProps {
+  onReady?: (data: YoutubeResponseTarget) => void;
+  onStateChange?: (data: YoutubeResponseTarget) => void;
   url: string;
+  mute?: boolean;
 }
 
 export default function YoutubePlayer(Props: YoutubePlayerProps) {
   const videoReady = (event: any) => {
-    event.target.pauseVideo();
+    if (event.target) {
+      event.target.pauseVideo();
+    }
+
+    if (Props.onReady) {
+      Props.onReady(event.target as YoutubeResponseTarget);
+    }
   };
 
   return (
@@ -28,9 +38,16 @@ export default function YoutubePlayer(Props: YoutubePlayerProps) {
             opts={{
               width: "100%",
               borderRadius: "2rem",
-              playerVars: { autoplay: 1 },
+              playerVars: { autoplay: 1, mute: Props.mute, controls: 0 },
             }}
             onReady={videoReady}
+            {...(Props.onStateChange && {
+              onStateChange: (event: any) => {
+                if (Props.onStateChange) {
+                  Props.onStateChange(event.target as YoutubeResponseTarget);
+                }
+              },
+            })}
           />
         </div>
       </div>

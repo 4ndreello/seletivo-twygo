@@ -1,3 +1,8 @@
 * {
   user-select: none;
 }
+
+@font-face {
+  font-family: "GeistMonoVF";
+  src: url("./fonts/GeistMonoVF.woff") format("woff");
+}

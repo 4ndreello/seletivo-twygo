@@ -1,5 +1,7 @@
 "use client";
 
+import YoutubePlayer from "@/components/YoutubePlayer";
+import { Course, Video } from "@/types";
 import {
   ArrowBackIcon,
   CheckIcon,
@@ -9,6 +11,9 @@ import {
 import {
   Box,
   Button,
+  Flex,
+  HStack,
+  IconButton,
   Input,
   Modal,
   ModalBody,
@@ -17,146 +22,272 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Skeleton,
+  Spinner,
   Text,
   Textarea,
   Tooltip,
   useDisclosure,
 } from "@chakra-ui/react";
+import callServer from "@utils/callServer";
+import extractYoutubeId from "@utils/extractYoutubeId";
+import useOnceCall from "@utils/useOnceCall";
+import validateYouTubeUrl from "@utils/validateYoutubeUrl";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function Page() {
   const router = useRouter();
 
-  const [course, setCourse] = useState<TCourse>({
+  const [course, setCourse] = useState<Course>({
     title: "",
     description: "",
-    dueDate: "01-01-2001      ",
+    dueDate: "",
     videos: [],
   });
   const query = useParams<{ id?: string }>();
   const courseId = query?.id ?? "";
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastVideo, setLastVideo] = useState<{
+    id: string;
+    duration?: number;
+  } | null>(null);
+  const [loadingLastVideo, setLoadingLastVideo] = useState(false);
+
   if (!courseId) return null;
 
-  useEffect(() => {
+  const [video, setVideo] = useState<Video>({
+    title: "",
+    youtubeId: "",
+    duration: 0,
+  });
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  useOnceCall(() => {
     if (courseId === "new") {
+      setIsLoading(false);
       return;
     }
 
-    fetch(`/api/course/${courseId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("data", data);
-        setCourse(data);
-      });
-  }, []);
-  const [video, setVideo] = useState<TVideo>({ title: "", youtubeId: "" });
+    callServer(`/api/course/${courseId}`).then((data) => {
+      if (!data) {
+        router.back();
+        return;
+      }
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
+      setCourse(data);
+      setIsLoading(false);
+    });
+  });
+
+  const changeVideoTime = (videoId: string, durationToSet: number) => {
+    setCourse((prev) => ({
+      ...prev,
+      videos: prev.videos.map((video) => {
+        let { duration } = video;
+
+        if (extractYoutubeId(video.youtubeId) === videoId) {
+          duration = durationToSet;
+        }
+
+        return {
+          ...video,
+          duration,
+        };
+      }),
+    }));
+  };
+
+  const extractVideoInformation = async (url: string) => {
+    const searchParams = new URL(url)?.searchParams;
+    const urlParams = new URLSearchParams(searchParams);
+    if (!urlParams) {
+      return;
+    }
+
+    const videoId = urlParams.get("v");
+    if (!videoId) {
+      return;
+    }
+
+    const params = new URLSearchParams({
+      format: "json",
+      url: `https://www.youtube.com/watch?v=${videoId}`,
+    });
+
+    const response = await callServer(
+      `https://www.youtube.com/oembed?${params.toString()}`
+    );
+
+    return response;
+  };
 
   const handleSaveVideo = () => {
-    if (video.title && video.youtubeId) {
-      setCourse({
-        ...course,
-        videos: [...course.videos, video],
-      });
-      setVideo({ title: "", youtubeId: "" });
-      onClose();
+    if (!video.title || !video.youtubeId) {
+      alert("Please, fill the title and youtube link");
+      return;
     }
+
+    if (!validateYouTubeUrl(video.youtubeId)) {
+      alert("Please, fill a valid youtube link");
+      return;
+    }
+
+    for (const currentVideo of course.videos) {
+      if (
+        extractYoutubeId(currentVideo.youtubeId) ===
+        extractYoutubeId(video.youtubeId)
+      ) {
+        alert("This video is already added");
+        return;
+      }
+    }
+
+    const setLoader =
+      !lastVideo || lastVideo.id !== extractYoutubeId(video.youtubeId);
+
+    if (setLoader) {
+      setLoadingLastVideo(true);
+      setLastVideo({
+        id: extractYoutubeId(video.youtubeId),
+      });
+    }
+
+    setYoutubeLink(extractYoutubeId(video.youtubeId));
+
+    setCourse((prev) => ({
+      ...prev,
+      videos: [...course.videos, video],
+    }));
+
+    if (!setLoader) {
+      changeVideoTime(
+        extractYoutubeId(video.youtubeId),
+        lastVideo?.duration ?? 0
+      );
+    }
+
+    setVideo({ title: "", youtubeId: "", duration: 0 });
+    onClose();
   };
+
+  const [youtubeLink, setYoutubeLink] = useState("");
 
   const handleRemoveVideo = (indexToRemove: number) => {
     const updatedVideos = course?.videos?.filter?.(
       (_, index) => index !== indexToRemove
     );
 
-    setCourse({
-      ...course,
+    setCourse((prev) => ({
+      ...prev,
       videos: updatedVideos,
-    });
+    }));
   };
 
   return (
     <Box p={15}>
-      <Box display="grid" gap="2">
-        <Box>
-          <Input
-            variant="outline"
-            onChange={(e) =>
-              setCourse({
-                ...course,
-                title: e.target.value,
-              })
-            }
-            value={course?.title}
-            placeholder="Title"
-          />
-        </Box>
-
-        <Textarea
-          placeholder="Description"
-          h={200}
-          onChange={(e) =>
-            setCourse({
-              ...course,
-              description: e.target.value,
-            })
-          }
-          value={course?.description}
-          resize={"none"}
-        />
-
-        <Box display={"flex"} gap={4}>
-          <Box flex={1}>
-            <Text>Due date</Text>
+      {isLoading ? (
+        <>
+          <Skeleton height="40px" mb={4} />
+          <Skeleton height="200px" mb={4} />
+          <Skeleton height="40px" mb={4} />
+          <Skeleton height="40px" mb={4} />
+          <Skeleton height="40px" mb={4} />
+        </>
+      ) : (
+        <Box display="grid" gap="2">
+          <Box>
             <Input
-              id="date"
-              value={new Date(course.dueDate).toJSON().split("T")[0]}
-              type="date"
+              variant="outline"
               onChange={(e) =>
-                setCourse({
-                  ...course,
-                  dueDate: e.target.value,
-                })
+                setCourse((prev) => ({
+                  ...prev,
+                  title: e.target.value,
+                }))
               }
+              value={course?.title}
+              placeholder="Title"
             />
           </Box>
-          <Box alignContent={"center"}>
-            <Text>Image</Text>
-            <input type="file" />
+
+          <Textarea
+            placeholder="Description"
+            h={200}
+            onChange={(e) =>
+              setCourse((prev) => ({
+                ...prev,
+                description: e.target.value,
+              }))
+            }
+            value={course?.description}
+            resize={"none"}
+          />
+
+          <Box display={"flex"} gap={4}>
+            <Box flex={1}>
+              <Text>Due date</Text>
+              <Input
+                id="date"
+                value={
+                  course?.dueDate
+                    ? new Date(course.dueDate).toJSON().split("T")[0]
+                    : ""
+                }
+                type="date"
+                onChange={(e) =>
+                  setCourse((prev) => ({
+                    ...prev,
+                    dueDate: e.target.value,
+                  }))
+                }
+              />
+            </Box>
           </Box>
-        </Box>
 
-        <Box>
-          <Text>Videos controller</Text>
-          <Box
-            borderRadius={6}
-            border={"1px"}
-            borderColor="var(--chakra-colors-chakra-border-color)"
-          >
-            <Button onClick={onOpen} borderRadius={0} w={"100%"}>
-              +
-            </Button>
+          <Box>
+            <Text>Videos controller</Text>
+            <Box
+              borderRadius={6}
+              border={"1px"}
+              borderColor="var(--chakra-colors-chakra-border-color)"
+            >
+              <Button
+                onClick={() => {
+                  if (loadingLastVideo) {
+                    alert(
+                      "Please, wait until the last informed video is ready"
+                    );
+                    return;
+                  }
 
-            <Box maxHeight={"28vh"} overflow={"auto"}>
-              {!!course.videos.length &&
-                course.videos.map((video, index) => (
-                  <Box key={index} display="flex" p={2}>
-                    <Box display={"flex"} alignItems={"center"}>
-                      <Text>{video.title}</Text>
+                  onOpen();
+                }}
+                borderRadius={0}
+                w={"100%"}
+              >
+                +
+              </Button>
+
+              <Box maxHeight={"28vh"} overflow={"auto"}>
+                {!!course.videos.length &&
+                  course.videos.map((video, index) => (
+                    <Box key={index} display="flex" p={2}>
+                      <Box display={"flex"} alignItems={"center"}>
+                        <Text>{video.title}</Text>
+                      </Box>
+
+                      <Box marginLeft="auto">
+                        <Button onClick={() => handleRemoveVideo(index)}>
+                          X
+                        </Button>
+                      </Box>
                     </Box>
-
-                    <Box marginLeft="auto">
-                      <Button onClick={() => handleRemoveVideo(index)}>
-                        X
-                      </Button>
-                    </Box>
-                  </Box>
-                ))}
+                  ))}
+              </Box>
             </Box>
           </Box>
         </Box>
-      </Box>
+      )}
 
       <Modal isOpen={isOpen} onClose={onClose} size={"2xl"}>
         <ModalOverlay />
@@ -184,43 +315,33 @@ export default function Page() {
                 m={1}
               >
                 <SearchIcon
+                  _hover={{
+                    cursor: "pointer",
+                  }}
                   onClick={() => {
-                    try {
-                      var searchParams = new URL(video.youtubeId)?.searchParams;
-                    } catch (_) {
+                    if (!validateYouTubeUrl(video.youtubeId)) {
+                      alert("Please, fill a valid youtube link");
                       return;
                     }
 
-                    const urlParams = new URLSearchParams(searchParams);
-                    if (!urlParams) {
-                      return;
-                    }
+                    extractVideoInformation(video.youtubeId).then(
+                      (response) => {
+                        if (!response) {
+                          return;
+                        }
 
-                    const videoId = urlParams.get("v");
-                    if (!videoId) {
-                      return;
-                    }
+                        setVideo({
+                          ...video,
+                          title: response.title,
+                        });
 
-                    const params = new URLSearchParams({
-                      format: "json",
-                      url: `https://www.youtube.com/watch?v=${videoId}`,
-                    });
-
-                    const url = `https://www.youtube.com/oembed?${params.toString()}`;
-
-                    fetch(url)
-                      .then((res) => res.json())
-                      .then((response) => {
-                        setVideo({ ...video, title: response.title });
                         const titleInput = document.getElementById(
                           "title"
                         ) as HTMLInputElement;
 
                         titleInput.value = response.title;
-                      })
-                      .catch((error) => {
-                        console.error("Error fetching data:", error);
-                      });
+                      }
+                    );
                   }}
                 />
               </Tooltip>
@@ -259,96 +380,149 @@ export default function Page() {
         p={5}
         display="flex"
         flex={1}
-        css={`
-          &:hover {
-            cursor: pointer;
-          }
-        `}
+        _hover={{
+          cursor: "pointer",
+        }}
       >
-        <Box>
-          <ArrowBackIcon
-            borderRadius={6}
-            p={2}
-            bg="yellow.500"
-            color="white"
-            onClick={() => {
-              router.back();
-            }}
-            boxSize={4}
-            w={16}
-            h={16}
-          />
-        </Box>
-
-        {courseId !== "new" && (
-          <Box>
-            <DeleteIcon
-              borderRadius={6}
-              p={2}
-              bg="red"
-              color="white"
+        <Flex position="fixed" bottom="0" right="0" p={4} align="center">
+          <HStack spacing={1}>
+            <IconButton
+              aria-label="Go back"
+              icon={<ArrowBackIcon />}
+              size="lg"
+              colorScheme="yellow"
+              borderRadius="full"
               onClick={() => {
-                fetch(`/api/course/${courseId}`, {
-                  method: "DELETE",
-                }).then(() => {
-                  router.back();
-                });
+                router.back();
               }}
-              boxSize={4}
-              w={16}
-              h={16}
             />
+
+            {courseId !== "new" && (
+              <IconButton
+                aria-label="Delete Course"
+                icon={<DeleteIcon />}
+                size="lg"
+                colorScheme="red"
+                borderRadius="full"
+                onClick={() => {
+                  callServer(`/api/course/${courseId}`, {
+                    method: "DELETE",
+                  }).then((response) => {
+                    if (!response) {
+                      return;
+                    }
+
+                    router.replace("/");
+                  });
+                }}
+              />
+            )}
+
+            <IconButton
+              aria-label="Save"
+              icon={<CheckIcon />}
+              size="lg"
+              colorScheme="green"
+              borderRadius="full"
+              onClick={async () => {
+                const { title, description, dueDate, videos } = course ?? {};
+
+                if (!dueDate) {
+                  alert("Please, select a due date");
+                  return;
+                }
+
+                if (!title) {
+                  alert("Please, fill the title");
+                  return;
+                }
+
+                if (!description) {
+                  alert("Please, fill the description");
+                  return;
+                }
+
+                if (loadingLastVideo) {
+                  alert("Please, wait until the last informed video is ready");
+                  return;
+                }
+
+                const method = courseId !== "new" ? "PATCH" : "POST";
+                const url =
+                  courseId !== "new"
+                    ? `/api/course/${courseId}`
+                    : "/api/course";
+
+                const response = await callServer(url, {
+                  method,
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    title,
+                    description,
+                    dueDate,
+                    videos,
+                  }),
+                });
+                if (!response) {
+                  return;
+                }
+
+                router.back();
+              }}
+            />
+          </HStack>
+        </Flex>
+
+        {loadingLastVideo && (
+          <Box
+            bg="rgba(0, 0, 0, 0.5)"
+            position="fixed"
+            bottom="0"
+            left="0"
+            right="0"
+            top="0"
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Spinner color="white" size="lg" />
           </Box>
         )}
+      </Box>
 
-        <Box>
-          <CheckIcon
-            borderRadius={6}
-            p={2}
-            bg="green"
-            color="white"
-            boxSize={4}
-            w={16}
-            h={16}
-            onClick={() => {
-              const { title, description, dueDate } = course ?? {};
+      <Box display={"none"}>
+        {!!youtubeLink && (
+          <YoutubePlayer
+            onReady={(target) => {
+              target.pauseVideo();
 
-              if (!dueDate) {
-                alert("Please, select a due date");
-                return;
-              }
+              const { videoId } = target.options;
+              const duration = target.getDuration();
 
-              fetch("/api/course", {
-                method: courseId !== "new" ? "PATCH" : "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  id: courseId,
-                  title,
-                  description,
-                  dueDate,
-                  videos: course.videos,
-                }),
-              }).then(() => {
-                router.back();
+              setLastVideo((prev) => {
+                if (!prev) {
+                  return null;
+                }
+
+                return {
+                  ...prev,
+                  duration,
+                };
               });
+
+              changeVideoTime(videoId, duration);
+
+              if (loadingLastVideo) {
+                setLoadingLastVideo(false);
+              }
             }}
+            url={youtubeLink}
+            mute
           />
-        </Box>
+        )}
       </Box>
     </Box>
   );
 }
-
-interface TVideo {
-  title: string;
-  youtubeId: string;
-}
-
-type TCourse = {
-  title: string;
-  description: string;
-  dueDate: string;
-  videos: Array<TVideo>;
-};

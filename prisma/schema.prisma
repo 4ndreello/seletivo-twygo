@@ -13,14 +13,15 @@ model Video {
   youtubeId String
   course    Course @relation(fields: [courseId], references: [id])
   courseId  String
+  duration  Int    @default(0)
 }
 
 model Course {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  image       String?
-  dueDate     DateTime
+  id            String   @id @default(uuid())
+  title         String
+  description   String
+  dueDate       DateTime
+  totalDuration Int      @default(0)
 
   Video Video[]
 }

@@ -1,7 +1,45 @@
+import { Course } from "@/types";
 import { PrismaClient } from "@prisma/client";
+import insertVideosGetTotalDuration from "@utils/insertVideos";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 const prisma = new PrismaClient();
+
+async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
+  const { id } = req.query;
+  const { title, description, dueDate, videos } = req.body as Course;
+
+  if (typeof id !== "string" || !id || !title || !description || !dueDate) {
+    return res.status(400).json({ message: "Invalid body" });
+  }
+
+  const course = await prisma.course.findUnique({
+    where: { id },
+  });
+
+  if (!course) {
+    return res.status(404).json({ message: "Course not found" });
+  }
+
+  await prisma.$transaction(async (prisma) => {
+    await prisma.video.deleteMany({
+      where: { courseId: course.id },
+    });
+
+    const totalDuration = await insertVideosGetTotalDuration(
+      prisma,
+      course.id,
+      videos
+    );
+
+    await prisma.course.update({
+      where: { id: course.id },
+      data: { title, description, dueDate: new Date(dueDate), totalDuration },
+    });
+  });
+
+  return res.status(200).json({ course });
+}
 
 async function handleDelete(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -39,7 +77,6 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   const course = await prisma.course.findUnique({
     where: { id },
   });
-
   if (!course) {
     return res.status(404).json({ message: "Course not found" });
   }
@@ -60,6 +97,8 @@ export default async function handler(
   try {
     if (req.method === "GET") {
       await handleGet(req, res);
+    } else if (req.method === "PATCH") {
+      await handlePatch(req, res);
     } else if (req.method === "DELETE") {
       await handleDelete(req, res);
     } else {
@@ -67,8 +106,7 @@ export default async function handler(
       res.status(405).end(`Method ${req.method} Not Allowed`);
     }
   } catch (error) {
-    console.error("Error in API handler:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error, success: false });
   } finally {
     await prisma.$disconnect();
   }
