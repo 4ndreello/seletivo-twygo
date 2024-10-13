@@ -1,3 +1,7 @@
+# Como usar
+
+- `npm run dev`
+
 # Seletivo Twygo
 
 A empresa Threewygo é uma empresa inovadora no mundo da educação online e estava determinada a criar a melhor plataforma de cursos de treinamento do mercado. Você, enquanto pessoa desenvolvedora, possui a missão de auxiliar essa empresa a realizar este desafio. 
