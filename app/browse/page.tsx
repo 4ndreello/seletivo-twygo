@@ -2,7 +2,7 @@
 
 import { Course } from "@/types";
 import "@app/global.css";
-import { AddIcon, TimeIcon, WarningTwoIcon } from "@chakra-ui/icons";
+import { AddIcon, LinkIcon, TimeIcon, WarningTwoIcon } from "@chakra-ui/icons";
 import {
   Box,
   Checkbox,
@@ -14,6 +14,8 @@ import {
   IconButton,
   Skeleton,
   Text,
+  Tooltip,
+  VStack,
 } from "@chakra-ui/react";
 import callServer from "@utils/callServer";
 import { useRouter } from "next/navigation";
@@ -21,6 +23,7 @@ import { useEffect, useState } from "react";
 
 interface TCourse extends Course {
   id: string;
+  modules: number;
 }
 
 export default function Page() {
@@ -65,6 +68,7 @@ export default function Page() {
           fontWeight={"bold"}
           textAlign="center"
           mb={5}
+          textTransform="uppercase"
           color="gray.800"
         >
           Browse through your courses
@@ -88,7 +92,7 @@ export default function Page() {
             {loading
               ? Array.from({ length: 3 }).map((_, index) => (
                   <GridItem key={index}>
-                    <Skeleton height="150px" borderRadius="15px" />
+                    <Skeleton height="350px" borderRadius="15px" />
                   </GridItem>
                 ))
               : courses.map((course, index) => (
@@ -102,14 +106,18 @@ export default function Page() {
                     _hover={{
                       bgGradient: "linear(to-r, white, gray.300)",
                       transform: "scale(1.05)",
+                      cursor: "pointer",
                     }}
                     key={index}
                     onClick={() => router.push(`/browse/${course.id}`)}
                     minW="250px"
-                    h="300px"
+                    h={{ base: "300px", md: "350px" }}
                     overflow="hidden"
+                    display="flex"
+                    flexDirection="column"
+                    justifyContent="space-between"
                   >
-                    <Box>
+                    <VStack spacing={4}>
                       <Text
                         textAlign="center"
                         fontWeight="bold"
@@ -120,35 +128,60 @@ export default function Page() {
                           ? `${course.title.substring(0, MAX_TITLE_SIZE)}...`
                           : course.title}
                       </Text>
-                    </Box>
 
-                    <Box mt={3}>
-                      <Text>
-                        {course.description.length > MAX_DESCRIPTION_SIZE
-                          ? `${course.description.substring(
-                              0,
-                              MAX_DESCRIPTION_SIZE
-                            )}...`
-                          : course.description}
-                      </Text>
-                    </Box>
+                      <Box>
+                        <Text>
+                          {course.description.length > MAX_DESCRIPTION_SIZE
+                            ? `${course.description.substring(
+                                0,
+                                MAX_DESCRIPTION_SIZE
+                              )}...`
+                            : course.description}
+                        </Text>
+                      </Box>
 
-                    <HStack justifyContent="center" mt={4}>
-                      <Icon as={TimeIcon} boxSize={5} />
-                      <Text fontSize="sm">
-                        {formatDuration(course.totalDuration)}
-                      </Text>
+                      {course.dueDate &&
+                        new Date(course.dueDate) < new Date() && (
+                          <HStack justifyContent="center" spacing={1} mt={1}>
+                            <Icon as={WarningTwoIcon} color="red.400" />
+                            <Text fontSize="sm" color="red.400">
+                              Course expired
+                            </Text>
+                          </HStack>
+                        )}
+                    </VStack>
+
+                    <HStack justifyContent="center" mt={4} spacing={6}>
+                      <HStack>
+                        <Tooltip
+                          hasArrow
+                          label="Total duration"
+                          bg="gray.300"
+                          color="black"
+                          m={1}
+                        >
+                          <Icon as={TimeIcon} boxSize={5} />
+                        </Tooltip>
+
+                        <Text fontSize="sm">
+                          {formatDuration(course.totalDuration)}
+                        </Text>
+                      </HStack>
+
+                      <HStack>
+                        <Tooltip
+                          hasArrow
+                          label="Number of modules"
+                          bg="gray.300"
+                          color="black"
+                          m={1}
+                        >
+                          <Icon as={LinkIcon} boxSize={5} />
+                        </Tooltip>
+
+                        <Text fontSize="sm">{course.modules}</Text>
+                      </HStack>
                     </HStack>
-
-                    {course.dueDate &&
-                      new Date(course.dueDate) < new Date() && (
-                        <HStack justifyContent="center" spacing={1} mt={1}>
-                          <Icon as={WarningTwoIcon} color="red.400" />
-                          <Text fontSize="sm" color="red.400">
-                            Course expired
-                          </Text>
-                        </HStack>
-                      )}
                   </GridItem>
                 ))}
           </Grid>

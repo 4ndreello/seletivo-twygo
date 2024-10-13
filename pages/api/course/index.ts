@@ -10,7 +10,11 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   let { dataFilter } = req.query;
 
   if (typeof dataFilter === "string") {
-    dataFilter = JSON.parse(dataFilter);
+    try {
+      dataFilter = JSON.parse(dataFilter);
+    } catch (error) {
+      throw new Error("Invalid dataFilter");
+    }
   }
 
   let object = {};
@@ -26,7 +30,21 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
   const courses = await prisma.course.findMany(object);
 
-  res.status(200).json({ courses });
+  res.status(200).json({
+    courses: await Promise.all(
+      courses.map(async (course) => {
+        const videos = await prisma.video.findMany({
+          where: { courseId: course.id },
+        });
+        let modules = 0;
+        if (videos) {
+          modules = videos.length;
+        }
+
+        return { ...course, modules };
+      })
+    ),
+  });
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
