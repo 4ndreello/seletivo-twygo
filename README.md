@@ -8,7 +8,6 @@
 - Chakra UI
 - Typescript
 - SQLite w/ Prisma
-- Jest
 
 # Seletivo Twygo
 
