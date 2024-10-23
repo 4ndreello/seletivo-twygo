@@ -12,7 +12,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   if (typeof dataFilter === "string") {
     try {
       dataFilter = JSON.parse(dataFilter);
-    } catch (error) {
+    } catch {
       throw new Error("Invalid dataFilter");
     }
   }
